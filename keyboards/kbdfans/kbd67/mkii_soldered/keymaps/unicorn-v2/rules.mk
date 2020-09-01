@@ -7,6 +7,7 @@ CONSOLE_ENABLE = no	# Console for debug(+400)
 COMMAND_ENABLE = no    # Commands for debug and configuration
 BACKLIGHT_ENABLE = no  # Enable keyboard backlight functionality
 RGBLIGHT_ENABLE = no
-RGB_MATRIX_ENABLE = WS2812
+ENCODER_ENABLE = yes
+#RGB_MATRIX_ENABLE = WS2812
 
 LINK_TIME_OPTIMIZATION_ENABLE = yes

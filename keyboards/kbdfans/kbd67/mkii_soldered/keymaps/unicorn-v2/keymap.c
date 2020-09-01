@@ -15,6 +15,20 @@
  */
 #include QMK_KEYBOARD_H
 
+#include "quantum.h"
+#include "action.h"
+#include "version.h"
+
+enum keyboard_layers {
+  _BASE = 0, 	// Base Layer
+  _FUNC,     	// Function Layer
+  _RGB,     	// RGB control Layer
+_SYS	};		  // System control layer (reset, sleep, etc)
+
+enum custom_keycodes {
+  KC_MAKE = SAFE_RANGE,
+  NEW_SAFE_RANGE  //use "NEW_SAFE_RANGE" for keymap specific codes
+};
 
 /* Keyboard & RGB matrix strip wiring / index
 * ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───────┬───┐
@@ -45,7 +59,7 @@
 
 
 //LED TO MATRIX MAP
-led_config_t g_led_config = {
+/* led_config_t g_led_config = {
     {
         // Key Matrix to LED Index
         {      0,      1,      2,      3,      4,      5,      6,      7,  8,      9, 10, 11,     12, NO_LED,     14,   15 },
@@ -72,22 +86,90 @@ led_config_t g_led_config = {
         1, 1, 1, 4, 1, 1, 1, 1, 1
         // Underglow LED's
         2,2,2,2,2,2,2,2,2,2
-    } };
+    } }; */
 
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
-  [0] = LAYOUT_all( /* Base */
-	KC_ESC,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,  KC_HOME,
-	KC_TAB,  KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC,          KC_BSLS, KC_END,
-	MO(1),   KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,           KC_PGUP,
-	KC_LSFT, KC_BSLS, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_PGDN,
-	KC_LCTL, KC_LGUI, KC_LALT,          KC_SPC,           KC_SPC,           KC_SPC,           KC_RALT, KC_RCTL,          KC_LEFT, KC_DOWN, KC_RGHT
+  [_BASE] = LAYOUT_all( /* Base */
+	KC_GESC,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,  KC_MUTE,
+	KC_TAB,            KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC,          KC_BSLS, LALT(KC_PSCR),
+	MO(_SYS),             KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,           KC_INS,
+	KC_LSFT,           KC_BSLS, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_DEL,
+	KC_LCTL,           KC_LGUI, KC_LALT,          KC_SPC,           MO(_FUNC),        KC_SPC,           LT(_RGB, KC_SLCK), MO(_FUNC),        KC_LEFT, KC_DOWN, KC_RGHT
   ),
-  [1] = LAYOUT_all( /* FN */
-	RESET,   KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,  _______, _______, BL_INC,
-	KC_CAPS, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______, BL_DEC,
-	_______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______,          _______,
-	_______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          KC_PGUP, _______,
-	_______, _______, _______,          _______,          _______,          _______,          _______, _______,          KC_HOME, KC_PGDN, KC_END
+  [_FUNC] = LAYOUT_all( /* FN */
+	KC_TILD,   KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,_______, _______, _______,
+	_______ , _______, _______, _______, _______, _______, _______, KC_P7, KC_P8, KC_P9, _______, _______, _______,          _______, LGUI(KC_PSCR),
+	_______, _______, _______, _______, _______, _______, _______, KC_P4, KC_P5, KC_P6, _______, _______,          KC_PENT,          _______,
+	_______, _______, _______, _______, _______, _______, _______, KC_P1, KC_P2, KC_P3, _______, _______, KC_NLCK,          KC_PGUP, _______,
+	_______, _______, _______,          _______,          _______,          KC_P0,          KC_PDOT, _______,          KC_HOME, KC_PGDN, KC_END
+  ),
+  [_RGB] = LAYOUT_all(
+    _______, _______, _______,   _______, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, _______, _______, RGB_TOG,
+    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______, RGB_MOD,
+    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______,          RGB_RMOD,
+    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RGB_VAI, RGB_M_SW,
+    _______, _______, _______,          _______,          _______,          _______,          _______, _______,          RGB_SAD, RGB_VAD, RGB_SAI
+  ),
+  [_SYS] = LAYOUT_all(
+    _______, _______, _______,   _______, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, _______, KC_SLEP, _______,
+    KC_CAPS, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RESET, _______,
+    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          KC_MAKE,          _______,
+    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______, _______,
+    _______, _______, _______,          _______,          _______,          _______,          _______, _______,          _______, _______, _______
   )
 };
+
+//===================Encoder Functions===================//
+void encoder_update_user(uint8_t index, bool clockwise) {
+    if (index == 0) { /* First encoder */
+        if (clockwise) {
+            tap_code(KC_VOLD);
+        } else {
+            tap_code(KC_VOLU);
+        }
+    }
+}
+//===================Encoder Functions===================//
+
+//===============USB Suspend Functions====================//
+#ifdef RGB_MATRIX_ENABLE
+void suspend_power_down_kb(void) {
+  rgb_matrix_set_suspend_state(true);
+  suspend_power_down_user(); }
+void suspend_wakeup_init_kb(void) {
+  rgb_matrix_set_suspend_state(false);
+  suspend_wakeup_init_user(); }
+#endif
+//===============USB Suspend Functions====================//
+
+__attribute__ ((weak))
+bool process_record_keymap(uint16_t keycode, keyrecord_t *record) {
+  return true;
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+  switch (keycode) {
+    case KC_MAKE:  // Compiles the firmware, and adds the flash command based on keyboard bootloader
+            if (!record->event.pressed) {
+            uint8_t temp_mod = get_mods();
+            uint8_t temp_osm = get_oneshot_mods();
+            clear_mods(); clear_oneshot_mods();
+            SEND_STRING("make " QMK_KEYBOARD ":" QMK_KEYMAP);
+    #ifndef FLASH_BOOTLOADER
+            if ((temp_mod | temp_osm) & MOD_MASK_SHIFT)
+    #endif
+            {
+                SEND_STRING(":flash");
+            }
+            if ((temp_mod | temp_osm) & MOD_MASK_CTRL) {
+                SEND_STRING(" -j8 --output-sync");
+            }
+            tap_code(KC_ENT);
+            set_mods(temp_mod);
+        }
+        break;
+
+  }
+  return process_record_keymap(keycode, record);
+}
