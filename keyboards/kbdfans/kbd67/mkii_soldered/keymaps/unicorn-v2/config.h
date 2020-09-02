@@ -1,8 +1,12 @@
 #undef BACKLIGHT_PIN
 #undef RGB_DI_PIN
 
-#define ENCODERS_PAD_A { B1 }
-#define ENCODERS_PAD_B { B2 }
+#define DYNAMIC_MACRO_NO_NESTING
+
+#define ENCODERS_PAD_A { B2 }
+#define ENCODERS_PAD_B { B1 }
+
+#define TAPPING_TERM 240
 
 #ifdef RGB_MATRIX_ENABLE
     //RGB Matrix Effects
