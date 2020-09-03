@@ -23,17 +23,44 @@ enum keyboard_layers {
   _BASE = 0, 	// Base Layer
   _FUNC,     	// Function Layer
   _RGB,     	// RGB control Layer
-_SYS	};		  // System control layer (reset, sleep, etc)
+  _SYS          // System control layer (reset, sleep, etc)
+};
 
 enum custom_keycodes {
   KC_MAKE = SAFE_RANGE,
-  NEW_SAFE_RANGE  //use "NEW_SAFE_RANGE" for keymap specific codes
+  NEW_SAFE_RANGE,  //use "NEW_SAFE_RANGE" for keymap specific codes
+  KC_WINLOCK,
 };
 
 // Tap Dance declarations
+typedef struct {
+    bool is_press_action;
+    uint8_t state;
+} tap;
+
+// Define a type for as many tap dance states as you need
+enum {
+    SINGLE_TAP = 1,
+    DOUBLE_TAP,
+    SINGLE_HOLD,
+    DOUBLE_HOLD,
+};
+
+// Tap dance keycodes
 enum {
     TD_MUTE,
+    TD_SYS_QL,
 };
+
+bool win_lock = false;
+
+// Function associated with all tap dances
+uint8_t cur_dance(qk_tap_dance_state_t *state);
+
+// Functions associated with individual tap dances
+void ql_finished(qk_tap_dance_state_t *state, void *user_data);
+void ql_reset(qk_tap_dance_state_t *state, void *user_data);
+
 
 /* Keyboard & RGB matrix strip wiring / index
 * ┌───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───┬───────┬───┐
@@ -98,7 +125,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [_BASE] = LAYOUT_all( /* Base */
 	KC_GESC,  KC_1,    KC_2,    KC_3,    KC_4,    KC_5,    KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_MINS, KC_EQL,  KC_BSPC, KC_DEL,  TD(TD_MUTE),
 	KC_TAB,            KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,    KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_LBRC, KC_RBRC,          KC_BSLS, LALT(KC_PSCR),
-	MO(_SYS),             KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,           KC_INS,
+	TD(TD_SYS_QL),             KC_A,    KC_S,    KC_D,    KC_F,    KC_G,    KC_H,    KC_J,    KC_K,    KC_L,    KC_SCLN, KC_QUOT,          KC_ENT,           KC_INS,
 	KC_LSFT,           KC_BSLS, KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RSFT,          KC_UP,   KC_DEL,
 	KC_LCTL,           KC_LGUI, KC_LALT,          KC_SPC,           MO(_FUNC),        KC_SPC,           MO(_RGB), MO(_FUNC),        KC_LEFT, KC_DOWN, KC_RGHT
   ),
@@ -118,33 +145,36 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
   [_SYS] = LAYOUT_all(
     _______, _______, _______,   _______, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, _______, KC_SLEP, _______,
-    KC_CAPS, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RESET, DM_RSTP,
+    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RESET, DM_RSTP,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          KC_MAKE,          DM_REC1,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______, DM_REC2,
-    _______, _______, _______,          _______,          _______,          _______,          _______, _______,          _______, _______, _______
+    _______, KC_WINLOCK, _______,          _______,          _______,          _______,          _______, _______,          _______, _______, _______
   )
 };
 
 //===================Encoder Functions===================//
-void encoder_update_user(uint8_t index, bool clockwise) {
-    if (index == 0) { /* First encoder */
-        if (clockwise) {
-            tap_code(KC_VOLD);
-        } else {
-            tap_code(KC_VOLU);
+#ifdef ENCODER_ENABLE
+    void encoder_update_user(uint8_t index, bool clockwise) {
+        if (index == 0) {
+            if (clockwise) {
+                tap_code(KC_VOLD);
+            } else {
+                tap_code(KC_VOLU);
+            }
         }
     }
-}
+#endif
 //===================Encoder Functions===================//
 
 //===============USB Suspend Functions====================//
+
 #ifdef RGB_MATRIX_ENABLE
-void suspend_power_down_kb(void) {
-  rgb_matrix_set_suspend_state(true);
-  suspend_power_down_user(); }
-void suspend_wakeup_init_kb(void) {
-  rgb_matrix_set_suspend_state(false);
-  suspend_wakeup_init_user(); }
+  void suspend_power_down_user(void) {
+    rgb_matrix_set_suspend_state(true);
+    suspend_power_down_user(); }
+  void suspend_wakeup_init_user(void) {
+    rgb_matrix_set_suspend_state(false);
+    suspend_wakeup_init_user(); }
 #endif
 //===============USB Suspend Functions====================//
 
@@ -174,7 +204,17 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             set_mods(temp_mod);
         }
         break;
-
+    case KC_LGUI:
+        if (win_lock) return false;
+        else return true;
+    case KC_RGUI:
+        if (win_lock) return false;
+        else return true;
+    case KC_WINLOCK:
+        if (record->event.pressed) {
+            win_lock = !win_lock;
+        }
+        break;
   }
   return process_record_keymap(keycode, record);
 }
@@ -183,4 +223,49 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 qk_tap_dance_action_t tap_dance_actions[] = {
     // Tap once for mute, twice for mute discord (scroll lock)
     [TD_MUTE] = ACTION_TAP_DANCE_DOUBLE(KC_MUTE, KC_SLCK),
+    [TD_SYS_QL] = ACTION_TAP_DANCE_FN_ADVANCED_TIME(NULL, ql_finished, ql_reset, 175),
 };
+
+// Determine the current tap dance state
+uint8_t cur_dance(qk_tap_dance_state_t *state) {
+    if (state->count == 1) {
+        if (!state->pressed) return SINGLE_TAP;
+        else return SINGLE_HOLD;
+    } else if (state->count == 2) {
+        if (!state->pressed) return DOUBLE_TAP;
+        else return DOUBLE_HOLD;
+    }
+    else return 8;
+}
+
+// Initialize tap structure associated with example tap dance key
+static tap ql_tap_state = {
+    .is_press_action = true,
+    .state = 0
+};
+
+// Functions that control what our tap dance key does
+void ql_finished(qk_tap_dance_state_t *state, void *user_data) {
+    ql_tap_state.state = cur_dance(state);
+    switch (ql_tap_state.state) {
+        case SINGLE_TAP:
+            if (host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK)) register_code(KC_CAPS); // Disable caps if it's enabled
+            break;
+        case SINGLE_HOLD:
+            break;
+        case DOUBLE_TAP:
+            register_code(KC_CAPS);
+            break;
+        case DOUBLE_HOLD:
+            layer_on(_SYS);
+            break;
+    }
+}
+
+void ql_reset(qk_tap_dance_state_t *state, void *user_data) {
+    // If the key was held down and now is released then switch off the layer
+    if (ql_tap_state.state >= SINGLE_HOLD) {
+        layer_clear();
+    }
+    ql_tap_state.state = 0;
+}
