@@ -52,7 +52,7 @@ enum {
     TD_SYS_QL,
 };
 
-bool win_lock = false;
+bool win_lock;
 
 // Function associated with all tap dances
 uint8_t cur_dance(qk_tap_dance_state_t *state);
@@ -144,7 +144,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______, _______, _______,          _______,          _______,          _______,          _______, _______,          RGB_SAD, RGB_VAD, RGB_SAI
   ),
   [_SYS] = LAYOUT_all(
-    _______, _______, _______,   _______, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, KC_SLEP, _______, _______,
+    _______, _______, _______,   _______, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, _______, _______, KC_SLEP,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RESET, DM_RSTP,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          KC_MAKE,          DM_REC1,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______, DM_REC2,
@@ -211,7 +211,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 qk_tap_dance_action_t tap_dance_actions[] = {
     // Tap once for mute, twice for mute discord (scroll lock)
     [TD_MUTE] = ACTION_TAP_DANCE_DOUBLE(KC_MUTE, KC_SLCK),
-    [TD_SYS_QL] = ACTION_TAP_DANCE_FN_ADVANCED_TIME(NULL, ql_finished, ql_reset, 175),
+    [TD_SYS_QL] = ACTION_TAP_DANCE_FN_ADVANCED_TIME(NULL, ql_finished, ql_reset, 200),
 };
 
 // Determine the current tap dance state
