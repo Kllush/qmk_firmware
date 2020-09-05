@@ -30,6 +30,9 @@ enum custom_keycodes {
   KC_MAKE = SAFE_RANGE,
   NEW_SAFE_RANGE,  //use "NEW_SAFE_RANGE" for keymap specific codes
   KC_WINLOCK,
+  AU_SONG1,
+  AU_SONG2,
+  AU_SONG3,
 };
 
 // Tap Dance declarations
@@ -43,16 +46,27 @@ enum {
     SINGLE_TAP = 1,
     DOUBLE_TAP,
     SINGLE_HOLD,
-    DOUBLE_HOLD,
+    DOUBLE_HOLD
 };
 
 // Tap dance keycodes
 enum {
     TD_MUTE,
-    TD_SYS_QL,
+    TD_SYS_QL
 };
 
 bool win_lock;
+
+// Sounds
+float rgb_layer[][2] = SONG(AG_SWAP_SOUND);
+float system_layer[][2] = SONG(UNICODE_WINDOWS);
+float win_on[][2] = SONG(QWERTY_SOUND);
+float win_off[][2] = SONG(GOODBYE_SOUND);
+float caps_on[][2] = SONG(NUM_LOCK_ON_SOUND);
+float caps_off[][2] = SONG(CAPS_LOCK_ON_SOUND);
+float song1[][2] = SONG(IMPERIAL_MARCH);
+float song2[][2] = SONG(RICK_ROLL);
+float song3[][2] = SONG(VICTORY_FANFARE_SHORT);
 
 // Function associated with all tap dances
 uint8_t cur_dance(qk_tap_dance_state_t *state);
@@ -144,10 +158,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     _______, _______, _______,          _______,          _______,          _______,          _______, _______,          RGB_SAD, RGB_VAD, RGB_SAI
   ),
   [_SYS] = LAYOUT_all(
-    _______, _______, _______,   _______, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, _______, _______, KC_SLEP,
+    _______, AU_SONG1, AU_SONG2,   AU_SONG3, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, _______, _______, KC_SLEP,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          RESET, DM_RSTP,
     _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          KC_MAKE,          DM_REC1,
-    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          _______, DM_REC2,
+    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, AU_TOG,          _______, DM_REC2,
     _______, KC_WINLOCK, _______,          _______,          _______,          _______,          _______, _______,          _______, _______, _______
   )
 };
@@ -185,22 +199,50 @@ bool process_record_keymap(uint16_t keycode, keyrecord_t *record) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
   switch (keycode) {
-    case KC_MAKE:  // Compiles the firmware, and adds the flash command based on keyboard bootloader
-            if (!record->event.pressed) {
-            clear_mods(); clear_oneshot_mods();
-            SEND_STRING("make " QMK_KEYBOARD ":" QMK_KEYMAP);
-            tap_code(KC_ENT);
+    case AU_SONG1:
+        if (record->event.pressed) {
+            #ifdef AUDIO_ENABLE
+                PLAY_SONG(song1);
+            #endif
         }
         break;
+    case AU_SONG2:
+        if (record->event.pressed) {
+            #ifdef AUDIO_ENABLE
+                PLAY_SONG(song2);
+            #endif
+        }
+        break;
+    case AU_SONG3:
+        if (record->event.pressed) {
+            #ifdef AUDIO_ENABLE
+                PLAY_SONG(song3);
+            #endif
+        }
+        break;
+    // Keep at bottom
     case KC_LGUI:
-        if (win_lock) return false;
-        else return true;
     case KC_RGUI:
-        if (win_lock) return false;
-        else return true;
+        if (record->event.pressed) {
+            if (win_lock) return false;
+            else return true;
+        }
+        break;
     case KC_WINLOCK:
         if (record->event.pressed) {
             win_lock = !win_lock;
+            #ifdef AUDIO_ENABLE
+                if (!win_lock) PLAY_SONG(win_on);
+                else PLAY_SONG(win_off);
+            #endif
+        }
+        break;
+    case KC_MAKE:  // Compiles the firmware, and adds the flash command based on keyboard bootloader
+        if (!record->event.pressed) {
+            clear_mods();
+            if (host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK)) tap_code(KC_CAPS); // Disable caps if it's enabled
+            SEND_STRING("make " QMK_KEYBOARD ":" QMK_KEYMAP);
+            tap_code(KC_ENT);
         }
         break;
   }
@@ -211,7 +253,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 qk_tap_dance_action_t tap_dance_actions[] = {
     // Tap once for mute, twice for mute discord (scroll lock)
     [TD_MUTE] = ACTION_TAP_DANCE_DOUBLE(KC_MUTE, KC_SLCK),
-    [TD_SYS_QL] = ACTION_TAP_DANCE_FN_ADVANCED_TIME(NULL, ql_finished, ql_reset, 200),
+    [TD_SYS_QL] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, ql_finished, ql_reset),
+    //[TD_SYS_QL] = ACTION_TAP_DANCE_FN_ADVANCED_TIME(NULL, ql_finished, ql_reset, 200),
 };
 
 // Determine the current tap dance state
@@ -237,19 +280,30 @@ void ql_finished(qk_tap_dance_state_t *state, void *user_data) {
     ql_tap_state.state = cur_dance(state);
     switch (ql_tap_state.state) {
         case SINGLE_TAP:
-            if (host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK)) register_code(KC_CAPS); // Disable caps if it's enabled
+            if (host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK)) {
+                tap_code(KC_CAPS); // Disable caps if it's enabled
+                #ifdef AUDIO_ENABLE
+                    PLAY_SONG(caps_off);
+                #endif
+            }
             break;
         case SINGLE_HOLD:
             break;
         case DOUBLE_TAP:
-            register_code(KC_CAPS);
+            if (host_keyboard_leds() & (1 << USB_LED_CAPS_LOCK)) {}
+            else {
+                tap_code(KC_CAPS); // Enable caps if it's enabled
+                #ifdef AUDIO_ENABLE
+                    PLAY_SONG(caps_on);
+                #endif
+            }
             break;
         case DOUBLE_HOLD:
             layer_on(_SYS);
             break;
     }
 }
-
+// Function that controls the reset tap dance
 void ql_reset(qk_tap_dance_state_t *state, void *user_data) {
     // If the key was held down and now is released then switch off the layer
     if (ql_tap_state.state >= SINGLE_HOLD) {
@@ -257,4 +311,49 @@ void ql_reset(qk_tap_dance_state_t *state, void *user_data) {
         layer_off(_SYS);
     }
     ql_tap_state.state = 0;
+}
+
+// Permissive hold per key
+#ifdef PERMISSIVE_HOLD_PER_KEY
+    bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
+        switch (keycode) {
+            case TD(TD_SYS_QL):
+                return true;
+            default:
+                return false;
+        }
+    }
+#endif
+
+// Tapping term per key
+#ifdef TAPPING_TERM_PER_KEY
+    uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
+        switch (keycode) {
+            case TD(TD_MUTE):
+                return 250;
+            case TD(TD_SYS_QL):
+                return 150;
+            default:
+                return 200;
+        }
+    }
+#endif
+
+// Layer state handling
+layer_state_t layer_state_set_user(layer_state_t state) {
+    switch (get_highest_layer(state)) {
+    case _RGB:
+        #ifdef AUDIO_ENABLE
+            PLAY_SONG(rgb_layer);
+        #endif
+        break;
+    case _SYS:
+        #ifdef AUDIO_ENABLE
+            PLAY_SONG(system_layer);
+        #endif
+        break;
+    default: //  for any other layers, or the default layer
+        break;
+    }
+  return state;
 }
