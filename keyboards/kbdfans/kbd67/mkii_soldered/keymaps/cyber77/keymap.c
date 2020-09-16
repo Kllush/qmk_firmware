@@ -58,12 +58,12 @@ enum {
 bool win_lock;
 
 // Sounds
-float rgb_layer[][2] = SONG(AG_SWAP_SOUND);
-float system_layer[][2] = SONG(UNICODE_WINDOWS);
-float win_on[][2] = SONG(QWERTY_SOUND);
+float rgb_layer[][2] = SONG(UNICODE_LINUX);
+float system_layer[][2] = SONG(TERMINAL_SOUND);
+float win_on[][2] = SONG(UNICODE_WINDOWS);
 float win_off[][2] = SONG(GOODBYE_SOUND);
-float caps_on[][2] = SONG(NUM_LOCK_ON_SOUND);
-float caps_off[][2] = SONG(CAPS_LOCK_ON_SOUND);
+float caps_on[][2] = SONG(CAPS_LOCK_ON_SOUND);
+float caps_off[][2] = SONG(CAPS_LOCK_OFF_SOUND);
 float song1[][2] = SONG(IMPERIAL_MARCH);
 float song2[][2] = SONG(RICK_ROLL);
 float song3[][2] = SONG(VICTORY_FANFARE_SHORT);
