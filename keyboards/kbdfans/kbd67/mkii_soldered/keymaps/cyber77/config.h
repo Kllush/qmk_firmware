@@ -2,14 +2,14 @@
 #undef RGB_DI_PIN
 #undef BACKLIGHT_PIN
 
-#define B7_AUDIO
+//#define B7_AUDIO
 #define DYNAMIC_MACRO_NO_NESTING
 #define PERMISSIVE_HOLD_PER_KEY
 #define TAPPING_TERM_PER_KEY
 
 #ifdef ENCODER_ENABLE
-    #define ENCODERS_PAD_A { B2 }
-    #define ENCODERS_PAD_B { B1 }
+    #define ENCODERS_PAD_A { B3 } //MISO
+    #define ENCODERS_PAD_B { B1 } //SCLK / SCK
 #endif
 
 #ifdef RGB_MATRIX_ENABLE
@@ -41,7 +41,7 @@
     //RGB Matrix Config
     #define RGB_DISABLE_WHEN_USB_SUSPENDED true // turn off effects when suspended
     #define DRIVER_LED_TOTAL 90                 // The number of LEDs connected
-    #define RGB_DI_PIN E2                       // Assign to pin E2 on board
+    #define RGB_DI_PIN B2                       // Assign to pin B2 / MOSI on board
     #define RGBLIGHT_SLEEP
     #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 200
     #define RGB_MATRIX_STARTUP_VAL 200
