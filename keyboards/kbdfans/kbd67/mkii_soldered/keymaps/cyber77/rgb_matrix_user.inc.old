@@ -1,0 +1,52 @@
+// Step 1.
+// Declare custom effects using the RGB_MATRIX_EFFECT macro
+// (note the lack of semicolon after the macro!)
+RGB_MATRIX_EFFECT(startup_anim)
+
+// Enable eeprom features to restore user's previous RGB mode
+#include "eeprom.h"
+#include "eeconfig.h"
+
+// Step 2.
+// Define effects inside the `RGB_MATRIX_CUSTOM_EFFECT_IMPLS` ifdef block
+#ifdef RGB_MATRIX_CUSTOM_EFFECT_IMPLS
+
+    // Copying splash code but only run once and starting from 0,0 coordinates (where the USB port is)
+    typedef HSV (*reactive_splash_f)(HSV hsv, int16_t dx, int16_t dy, uint8_t dist, uint16_t tick);
+
+    static bool startup_animation_run(effect_params_t* params, reactive_splash_f effect_func) {
+        RGB_MATRIX_USE_LIMITS(led_min, led_max);
+
+        int32_t timer = timer_read(); // Timer for boot animation to finish, 2.5s. Defined in config.h
+
+        if (timer < STARTUP_ANIM_TIME) { // Run the animation while it's been < 2.5s
+            for (uint8_t i = led_min; i < led_max; i++) {
+                RGB_MATRIX_TEST_LED_FLAGS();
+                HSV hsv = rgb_matrix_config.hsv;
+                hsv.v   = 0;
+                for (uint8_t j = 0; j < 1; j++) {
+                    int16_t  dx   = g_led_config.point[i].x;
+                    int16_t  dy   = g_led_config.point[i].y;
+                    uint8_t  dist = sqrt16(dx * dx + dy * dy);
+                    uint16_t tick = scale16by8(g_rgb_timer, qadd8(rgb_matrix_config.speed, 1));
+                    hsv           = effect_func(hsv, dx, dy, dist, tick);
+                }
+                hsv.v   = scale8(hsv.v, rgb_matrix_config.hsv.v);
+                RGB rgb = rgb_matrix_hsv_to_rgb(hsv);
+                rgb_matrix_set_color(i, rgb.r, rgb.g, rgb.b);
+            }
+            return rgb_matrix_check_finished_leds(led_max);
+        } else if (timer < STARTUP_ANIM_TIME + 100) { // Reload the user's previous mode after 2.5s. Allow 100ms for scan.
+            eeprom_read_block(&rgb_matrix_config, EECONFIG_RGB_MATRIX, sizeof(rgb_matrix_config));
+            rgb_matrix_mode_noeeprom(rgb_matrix_config.mode);
+            return rgb_matrix_check_finished_leds(led_max);
+        } else { // Animation is over after 2.5s and do nothing. However, custom effects can still be switched to if using keycodes like RGB_MOD.
+            //rgblight_step(); // In this case, just run this to skip to next mode...jank but it works.
+            return rgb_matrix_check_finished_leds(led_max);
+        }
+    }
+
+    // Startup animation function
+    static bool startup_anim(effect_params_t* params) { return startup_animation_run(params, &SPLASH_math); }
+
+#endif // RGB_MATRIX_CUSTOM_EFFECT_IMPLS

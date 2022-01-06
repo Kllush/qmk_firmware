@@ -17,7 +17,11 @@
         "xstddef": "c",
         "type_traits": "c",
         "utility": "c",
-        "ranges": "c"
+        "ranges": "c",
+        "iterator": "c",
+        "xhash": "c",
+        "xmemory": "c",
+        "xtree": "c"
     },
     "[markdown]": {
         "editor.trimAutoWhitespace": false,
