@@ -24,18 +24,21 @@
 
 //extern rgb_config_t rgb_matrix_config;
 
-static uint16_t     dynamic_loop_timer;
-static uint16_t     boot_timer;
-static HSV          rgb_original_hsv;
-static int8_t       fade_status = 0;
-static int8_t       boot_status = 0;
-static bool         RGB_MOD_FLAG;
-static bool         LIGHTBAR_FLAG;
+uint16_t     fade_timer;
+uint16_t     boot_timer;
+uint16_t     repeat_timer;
+uint16_t     spam_interval = 1000; // (1000ms == 1s)
+HSV          rgb_original_hsv;
+int8_t       fade_status = 0;
+int8_t       boot_status = 0;
+
+static bool  RGB_MOD_FLAG;
+static bool  LIGHTBAR_FLAG;
 
 // Custom RGB timeout timer
 #if RGB_DISABLE_TIMEOUT == 0
-    static uint32_t     rgb_anykey_timeout;
-    static bool         timeout;
+    uint32_t     rgb_anykey_timeout;
+    bool         timeout;
 #endif
 
 // Define custom values if not defined in config.h
@@ -242,20 +245,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 //===============Custom Functions=========================//
 void rgb_matrix_fade_in(void) {
-    dynamic_loop_timer = timer_read();
+    fade_timer = timer_read();
     rgb_original_hsv = rgb_matrix_config.hsv;  //grab current V value to restore
     rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, 0);
     fade_status = 1;
 }
 
 void rgb_matrix_fade_out(void) {
-    dynamic_loop_timer = timer_read();
+    fade_timer = timer_read();
     rgb_original_hsv = rgb_matrix_config.hsv;  //grab current V value to restore
     fade_status = -1;
 }
 
 void rgb_matrix_fade_out_noeeprom(void) {
-    dynamic_loop_timer = timer_read();
+    fade_timer = timer_read();
     rgb_original_hsv = rgb_matrix_config.hsv;  //grab current V value to restore
     fade_status = -2;
 }
@@ -288,6 +291,11 @@ void rgb_matrix_boot_anim(uint8_t boot_anim) {
         }
     #endif
 } // End of boot animation
+
+// Infinite repeating key macro
+//void
+
+// End of infinite repeating key
 
 //===============Custom Functions End=====================//
 
@@ -367,11 +375,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             wait_ms(250);
             reset_keyboard();
             return false;
-        default:
-            return true;
-        }
-    } else {    // On key press
-        switch (keycode) {
         case RGB_TOG:   // Override original RGB_TOG function and add fades
             #if (defined (RGB_MATRIX_ENABLE)) || (defined (RGBLIGHT_ENABLE))
                 if (rgb_matrix_is_enabled()) {
@@ -382,6 +385,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 }
             #endif
             return false;
+        default:
+            return true;
+        }
+    } else {    // On key press
+        switch (keycode) {
         case KC_LOCK_W:   // Locking "W" key
             register_code(KC_W);
             return false;
@@ -610,36 +618,30 @@ void rgb_matrix_indicators_user (void) {
     // Fade animation code
     HSV hsv = rgb_matrix_get_hsv();
     switch(fade_status) {
-        case 1:                                                         // Fade in code, slows down fade in to every FADE_TIME ms
-            if (timer_elapsed(dynamic_loop_timer) > FADE_TIME) {
+        case 1:     // Fade in code, slows down fade in to every FADE_TIME ms
+            if ((timer_elapsed(fade_timer) > FADE_TIME) && (hsv.v <= rgb_original_hsv.v)) {
                 rgb_matrix_increase_val_noeeprom();
-                dynamic_loop_timer = timer_read();
-            }
-
-            if (hsv.v >= rgb_original_hsv.v) {                          // End code, when brightness has reached max configured
+                fade_timer = timer_read();
+            } else if (hsv.v >= rgb_original_hsv.v) {   // End code, when brightness has reached max configured
                 fade_status = 0;
                 rgb_matrix_sethsv( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);
             }
             return;
-        case -1:                                                        // Fade out code, slows down fade in to every FADE_TIME ms
-            if (timer_elapsed(dynamic_loop_timer) > FADE_TIME) {
+        case -1:    // Fade out code, slows down fade in to every FADE_TIME ms
+            if ((timer_elapsed(fade_timer) > FADE_TIME) && (hsv.v > 0)) {
                 rgb_matrix_decrease_val_noeeprom();
-                dynamic_loop_timer = timer_read();
-            }
-
-            if (hsv.v == 0) {                                           // End code, when brightness has reached max configured
+                fade_timer = timer_read();
+            } else if (hsv.v == 0) {    // End code, when brightness has reached 0
                 fade_status = 0;
                 rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);
                 rgb_matrix_disable();
             }
             return;
-        case -2:                                                        // Fade out code, no EEPROM. Slows down fade in to every FADE_TIME ms
-            if (timer_elapsed(dynamic_loop_timer) > FADE_TIME) {
+        case -2:    // Fade out code, no EEPROM. Slows down fade in to every FADE_TIME ms
+            if ((timer_elapsed(fade_timer) > FADE_TIME) && (hsv.v > 0)) {
                 rgb_matrix_decrease_val_noeeprom();
-                dynamic_loop_timer = timer_read();
-            }
-
-            if (hsv.v == 0) {                                           // End code, when brightness has reached max configured
+                fade_timer = timer_read();
+            } else if (hsv.v == 0) {    // End code, when brightness has reached max configured
                 fade_status = 0;
                 rgb_matrix_sethsv_noeeprom( rgb_matrix_config.hsv.h, rgb_matrix_config.hsv.s, rgb_original_hsv.v);
                 rgb_matrix_disable_noeeprom();
