@@ -26,14 +26,18 @@
 
 uint16_t     fade_timer;
 uint16_t     boot_timer;
-uint16_t     repeat_timer;
-uint16_t     spam_interval = 1000; // (1000ms == 1s)
+uint16_t     spam_timer;
+uint16_t     spam_interval = 1000;
 HSV          rgb_original_hsv;
 int8_t       fade_status = 0;
 int8_t       boot_status = 0;
 
 static bool  RGB_MOD_FLAG;
 static bool  LIGHTBAR_FLAG;
+
+// Spam G and Q macros for lost ark
+bool Q_SPAM;
+bool G_SPAM;
 
 // Custom RGB timeout timer
 #if RGB_DISABLE_TIMEOUT == 0
@@ -71,6 +75,8 @@ enum custom_keycodes {
   KC_LOCK_W,            // Locking "W" key for autowalk, to be used with tap dance functions. Otherwise, you can just use KC_LOCK feature
   MON_OFF,              // Custom keycode to turn off monitors and timeout the backlight. To be used with nircmd on the host computer.
   EEP_RST_R,            // Wipe eeprom and reset keyboard
+  KC_Q_SPAM,
+  KC_G_SPAM,
   NEW_SAFE_RANGE,       // Use "NEW_SAFE_RANGE" for keymap specific codes
 };
 
@@ -235,8 +241,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   ),
   [_SYS] = LAYOUT_all(
     _______, _______, _______, _______, _______, _______,   _______, _______, _______,   _______, _______, _______,  _______, _______, _______, KC_SLEP,
-    _______, _______, KC_LOCK_W, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          VRSN, DM_REC1,
-    _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          KC_MAKE,          DM_REC2,
+    _______, KC_Q_SPAM, KC_LOCK_W, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,          VRSN, DM_REC1,
+    _______, _______, _______, _______, _______, KC_G_SPAM, _______, _______, _______, _______, _______, _______,          KC_MAKE,          DM_REC2,
     _______, _______, _______, _______, _______, EEP_RST_R, RESET, NK_TOGG, _______, _______, _______, _______, _______,          _______, DM_RSTP,
     _______, GUI_TOG, _______,          _______,          MON_OFF,          _______,          _______, _______,          _______, _______, _______
   )
@@ -385,6 +391,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 }
             #endif
             return false;
+        case KC_G_SPAM: // Spam keys for idle farming in lost ark (Skill "Q" and "G" farm)
+            G_SPAM ^= 1;
+            spam_timer = timer_read();
+            return false;
+        case KC_Q_SPAM:
+            Q_SPAM ^= 1;
+            spam_timer = timer_read();
+            return false;
+        case KC_G:      // Easily cancel key spam by pressing the normal key again
+            G_SPAM = 0;
+            return true;
+        case KC_Q:
+            Q_SPAM = 0;
+            return true;
         default:
             return true;
         }
@@ -685,3 +705,18 @@ void suspend_wakeup_init_user(void) {
     #endif
 }
 //=======Keyboard init/suspend functions End=======//
+
+//=======Matrix Scan User==========================//
+void matrix_scan_user(void) {
+    if (timer_elapsed(spam_timer) >= spam_interval) {
+        if (G_SPAM) {
+            spam_timer = timer_read();
+            tap_code(KC_G);
+        }
+        if (Q_SPAM) {
+            spam_timer = timer_read();
+            tap_code(KC_Q);
+        }
+    }
+}
+//=======Matrix Scan User==========================//
