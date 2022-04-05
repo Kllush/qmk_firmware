@@ -19,7 +19,7 @@
 
 #define USB_POLLING_INTERVAL_MS 2
 #define QMK_KEYS_PER_SCAN 4
-#define DEBOUNCE 1
+#define DEBOUNCE 3
 
 // Free up space
 #define NO_ACTION_ONESHOT
