@@ -120,7 +120,8 @@ led_config_t g_led_config = {
 __attribute__ ((weak))
 void rgb_matrix_indicators_user(void) {
     if (host_keyboard_led_state().caps_lock) {
-        rgb_matrix_set_color(28, 0xFF, 0xFF, 0xFF);
+        rgb_matrix_set_color(28, 255, 0, 0);
+        rgb_matrix_set_color(41, 255, 0, 0);
     }
 }
 #endif
